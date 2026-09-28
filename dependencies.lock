@@ -1,0 +1,61 @@
+dependencies:
+  BresserWeatherSensorReceiver:
+    component_hash: a7cfded4c74bc637b265289dba6857e54e700092e081fe29ba8befd214ea9977
+    dependencies: []
+    source:
+      git: https://github.com/kasbert/BresserWeatherSensorReceiver
+      path: .
+      type: git
+    version: 8edb9f9366fe81d106b5c61fd57079d861029c71
+  espressif/cjson:
+    component_hash: e788323270d90738662d66fffa910bfe1fba019bba087f01557e70c40485b469
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.7.19~2
+  espressif/mdns:
+    component_hash: b679eafd0acae2066e2645bd91d073e33ca5be515e2545cd3c4e55a3e3bce3cb
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.13.1
+  espressif/mqtt:
+    component_hash: fb18bc3b65aa8c94693a9811ffc322cca8a65d92d5ec84983d3e385080e3969c
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.3'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.1.0
+  idf:
+    source:
+      type: idf
+    version: 6.1.0
+  rf69:
+    component_hash: e56ad6e46c3b1a6b7840e6773371c3706841eaf2b3ddda280396b223923e4e30
+    dependencies: []
+    source:
+      git: https://github.com/nopnop2002/esp-idf-rf69.git
+      path: components/rf69
+      type: git
+    version: 5396c316f6204a4f2dc8b826f4e5045e690e0471
+direct_dependencies:
+- BresserWeatherSensorReceiver
+- espressif/cjson
+- espressif/mdns
+- espressif/mqtt
+- idf
+- rf69
+manifest_hash: 929a5a95d9886ee6e6744d64c70c22633e1ea449aa8d31612a59f9f129082d89
+target: esp32s3
+version: 3.0.0

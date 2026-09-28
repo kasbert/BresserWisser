@@ -1,0 +1,244 @@
+menu "Application Configuration"
+
+    config DIO0_GPIO
+        int "RF69 DIO0 GPIO"
+        range -1 GPIO_RANGE_MAX
+        default  0
+        help
+            Pin Number to be used as the DIO0 signal (==interrupt).
+
+	menu "WiFi Setting"
+
+        config ESP_WIFI_SSID
+            string "WiFi SSID"
+            default "myssid"
+            help
+                SSID (network name) for the example to connect to.
+
+        config ESP_WIFI_PASSWORD
+            string "WiFi Password"
+            default "mypassword"
+            help
+                WiFi password (WPA or WPA2) for the example to use.
+
+        choice ESP_WIFI_SAE_MODE
+            prompt "WPA3 SAE mode selection"
+            default ESP_STATION_EXAMPLE_WPA3_SAE_PWE_BOTH
+            help
+                Select mode for SAE as Hunt and Peck, H2E or both.
+            config ESP_STATION_EXAMPLE_WPA3_SAE_PWE_HUNT_AND_PECK
+                bool "HUNT AND PECK"
+            config ESP_STATION_EXAMPLE_WPA3_SAE_PWE_HASH_TO_ELEMENT
+                bool "H2E"
+                depends on ESP_WIFI_ENABLE_SAE_H2E
+            config ESP_STATION_EXAMPLE_WPA3_SAE_PWE_BOTH
+                bool "BOTH"
+                depends on ESP_WIFI_ENABLE_SAE_H2E
+        endchoice
+
+        config ESP_WIFI_PW_ID
+            string "PASSWORD IDENTIFIER"
+            depends on  ESP_STATION_EXAMPLE_WPA3_SAE_PWE_HASH_TO_ELEMENT|| ESP_STATION_EXAMPLE_WPA3_SAE_PWE_BOTH
+            default ""
+            help
+                password identifier for SAE H2E
+
+        config ESP_MAXIMUM_RETRY
+            int "Maximum retry"
+            default 5
+            help
+                Set the Maximum retry to avoid station reconnecting to the AP unlimited when the AP is really inexistent.
+
+        choice ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD
+            prompt "WiFi Scan auth mode threshold"
+            default ESP_WIFI_AUTH_WPA2_PSK
+            help
+                The weakest authmode to accept in the scan mode.
+                This value defaults to ESP_WIFI_AUTH_WPA2_PSK in case password is present and ESP_WIFI_AUTH_OPEN is used.
+                Please select ESP_WIFI_AUTH_WEP/ESP_WIFI_AUTH_WPA_PSK in case AP is operating in WEP/WPA mode.
+
+            config ESP_WIFI_AUTH_OPEN
+                bool "OPEN"
+            config ESP_WIFI_AUTH_WEP
+                bool "WEP"
+            config ESP_WIFI_AUTH_WPA_PSK
+                bool "WPA PSK"
+            config ESP_WIFI_AUTH_WPA2_PSK
+                bool "WPA2 PSK"
+            config ESP_WIFI_AUTH_WPA_WPA2_PSK
+                bool "WPA/WPA2 PSK"
+            config ESP_WIFI_AUTH_WPA3_PSK
+                bool "WPA3 PSK"
+            config ESP_WIFI_AUTH_WPA2_WPA3_PSK
+                bool "WPA2/WPA3 PSK"
+            config ESP_WIFI_AUTH_WAPI_PSK
+                bool "WAPI PSK"
+        endchoice
+
+
+	endmenu
+
+    config SNTP_TIME_SERVER
+        string "SNTP server name"
+        default "pool.ntp.org"
+        help
+            Hostname of the main SNTP server.
+
+    choice SNTP_TIME_SYNC_METHOD
+        prompt "Time synchronization method"
+        default SNTP_TIME_SYNC_METHOD_IMMED
+        help
+            Time synchronization method.
+
+        config SNTP_TIME_SYNC_METHOD_IMMED
+            bool "update time immediately when received"
+        config SNTP_TIME_SYNC_METHOD_SMOOTH
+            bool "update time with smooth method (adjtime)"
+        config SNTP_TIME_SYNC_METHOD_CUSTOM
+            bool "custom implementation"
+    endchoice
+
+    config WIFI_MANAGER
+        bool "WIFI Manager"
+        default  y
+        help
+                Create AP for configuration
+
+    config USE_MDNS
+        bool "MDNS"
+        default  y
+
+    config USE_MQTT
+        bool "Post to MQ"
+        default  y
+        help
+                Create AP for configuration
+
+    config HOSTNAME
+        string "Hostname"
+        default "bresserwisser"
+        help
+            The mDNS etc. host name used by the ESP32.
+
+    config MQTT_PREFIX
+        string "MQTT hostname prefix"
+        default "bresserwisser"
+        help
+            host name used by the ESP32.
+
+	menu "Broker Setting"
+
+		choice MQTT_TRANSPORT
+			prompt "MQTT Transport"
+			default MQTT_TRANSPORT_OVER_TCP
+			help
+				Select MQTT Transport.
+			config MQTT_TRANSPORT_OVER_TCP
+				bool "Using Over TCP"
+				help
+					Using Over TCP
+			config MQTT_TRANSPORT_OVER_SSL
+				bool "Using over SSL"
+				help
+					Using over SSL
+			config MQTT_TRANSPORT_OVER_WS
+				bool "Using over WS"
+				help
+					Using over WS
+			config MQTT_TRANSPORT_OVER_WSS
+				bool "Using over WSS"
+				help
+					Using over WSS
+		endchoice
+
+		config MQTT_BROKER
+			string "MQTT Broker"
+			default "broker.emqx.io"
+			help
+				Host name or IP address of the broker to connect to
+
+		config MQTT_PORT_TCP
+			depends on MQTT_TRANSPORT_OVER_TCP
+			int "MQTT Port"
+			range 0 65535
+			default 1883
+			help
+				Port number of the broker to connect to.
+
+		config MQTT_PORT_SSL
+			depends on MQTT_TRANSPORT_OVER_SSL
+			int "MQTT Port"
+			range 0 65535
+			default 8883
+			help
+				Port number of the broker to connect to.
+
+		config MQTT_PORT_WS
+			depends on MQTT_TRANSPORT_OVER_WS
+			int "MQTT Port"
+			range 0 65535
+			default 8083
+			help
+				Port number of the broker to connect to.
+
+		config MQTT_PORT_WSS
+			depends on MQTT_TRANSPORT_OVER_WSS
+			int "MQTT Port"
+			range 0 65535
+			default 8084
+			help
+				Port number of the broker to connect to.
+
+		choice MQTT_PROTOCOL
+			prompt "MQTT Protocol"
+			default MQTT_PROTOCOL_V_3_1_1
+			help
+				Select Protocol.
+			config MQTT_PROTOCOL_V_3_1_1
+				bool "PROTOCOL_V_3_1_1"
+				help
+					PROTOCOL_V_3_1_1
+			config MQTT_PROTOCOL_V_5
+				bool "PROTOCOL_V_5"
+				help
+					PROTOCOL_V_5.
+		endchoice
+
+		config MQTT_PUB_TOPIC
+			depends on RECEIVER
+			string "Publish Topic"
+			default "/topic/radio/test"
+			help
+				Topic of publish
+
+		config MQTT_SUB_TOPIC
+			depends on SENDER
+			string "Subscribe Topic"
+			default "/topic/radio/test"
+			help
+				Topic of subscribe
+
+		config BROKER_AUTHENTICATION
+			bool "Server requests for password when connecting"
+			default n
+			help
+				Server requests for password when connecting.
+
+		config AUTHENTICATION_USERNAME
+			depends on BROKER_AUTHENTICATION
+			string "Username used for connecting to the broker"
+			default "user"
+			help
+				Username used for connecting to the broker.
+
+		config AUTHENTICATION_PASSWORD
+			depends on BROKER_AUTHENTICATION
+			string "Password used for connecting to the broker"
+			default "password"
+			help
+				Username used for connecting to the broker.
+
+	endmenu
+
+
+endmenu 
