@@ -23,3 +23,6 @@ dependencies:
   BresserWeatherSensorReceiver:
     git: https://github.com/kasbert/BresserWeatherSensorReceiver
     version: esp-idf
+  sx126x:
+    git: https://github.com/nopnop2002/esp-idf-sx126x.git
+    path: components/ra01s

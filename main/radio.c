@@ -6,11 +6,31 @@
 #include "math.h"
 #include "driver/gpio.h"
 
-#include "rf69.h"
-
 static const char *TAG = "RADIO";
 
 #define MSG_BUF_SIZE            27
+
+extern QueueHandle_t radioReceiveQueue;
+
+void onPacketReceived(void *arg) {
+
+    // TODO check if the whole 66 byte message could be read here
+    // However it may not be ready yet
+    int pin_number = CONFIG_INT_GPIO; //not really used
+    BaseType_t higher_priority_task_woken = pdFALSE;
+
+    // Send data to the back of the queue from the ISR
+    xQueueSendFromISR(radioReceiveQueue, &pin_number, &higher_priority_task_woken);
+
+    // Yield if a higher priority task was unblocked
+    if (higher_priority_task_woken == pdTRUE) {
+        portYIELD_FROM_ISR();
+    }
+}
+
+#if CONFIG_RADIO_TYPE_RFM68
+
+#include "rf69.h"
 
 uint8_t spiRead(uint8_t reg);
 uint8_t spiBurstRead(uint8_t reg, uint8_t* dest, uint8_t len);
@@ -73,25 +93,6 @@ void setRXBandwith(float rxBw, bool ookEnabled) {
 void setPayloadLength(uint8_t len) {
     spiWrite(RH_RF69_REG_38_PAYLOADLENGTH, len);
 }
-
-extern QueueHandle_t radioReceiveQueue;
-
-void onPacketReceived(void *arg) {
-
-    // TODO check if the whole 66 byte message could be read here
-    // However it may not be ready yet
-    int pin_number = CONFIG_DIO0_GPIO;
-    BaseType_t higher_priority_task_woken = pdFALSE;
-
-    // Send data to the back of the queue from the ISR
-    xQueueSendFromISR(radioReceiveQueue, &pin_number, &higher_priority_task_woken);
-
-    // Yield if a higher priority task was unblocked
-    if (higher_priority_task_woken == pdTRUE) {
-        portYIELD_FROM_ISR();
-    }
-}
-
 
 bool radio_init() {
 	float freq;
@@ -158,10 +159,192 @@ bool radio_init() {
     spiWrite(RH_RF69_REG_25_DIOMAPPING1, 0x40); 
     setOpMode(RH_RF69_OPMODE_MODE_RX);
 
-    gpio_num_t interruptNum = CONFIG_DIO0_GPIO; // GPIO number for the interrupt
+    gpio_num_t interruptNum = CONFIG_INT_GPIO; // GPIO number for the interrupt
     gpio_set_direction(interruptNum, GPIO_MODE_INPUT);
     gpio_set_intr_type(interruptNum, GPIO_INTR_POSEDGE);
     gpio_isr_handler_add(interruptNum, (gpio_isr_t)onPacketReceived, 0);
 
     return true;
 }
+#endif
+
+#if CONFIG_RADIO_TYPE_SX1262
+
+#include "ra01s.h"
+
+const uint8_t rxBwLut[] = {
+    SX126X_GFSK_RX_BW_4_8,
+    SX126X_GFSK_RX_BW_5_8,
+    SX126X_GFSK_RX_BW_7_3,
+    SX126X_GFSK_RX_BW_9_7,
+    SX126X_GFSK_RX_BW_11_7,
+    SX126X_GFSK_RX_BW_14_6,
+    SX126X_GFSK_RX_BW_19_5,
+    SX126X_GFSK_RX_BW_23_4,
+    SX126X_GFSK_RX_BW_29_3,
+    SX126X_GFSK_RX_BW_39_0,
+    SX126X_GFSK_RX_BW_46_9,
+    SX126X_GFSK_RX_BW_58_6,
+    SX126X_GFSK_RX_BW_78_2,
+    SX126X_GFSK_RX_BW_93_8,
+    SX126X_GFSK_RX_BW_117_3,
+    SX126X_GFSK_RX_BW_156_2,
+    SX126X_GFSK_RX_BW_187_2,
+    SX126X_GFSK_RX_BW_234_3,
+    SX126X_GFSK_RX_BW_312_0,
+    SX126X_GFSK_RX_BW_373_6,
+    SX126X_GFSK_RX_BW_467_0,
+  };
+
+  int16_t findRxBw(float rxBw, const uint8_t* lut, size_t lutSize, float rxBwMax, uint8_t* val) {
+  // lookup tables to avoid comparing a whole bunch of floats
+  const uint16_t rxBwAvg[] = {
+    53, 66, 85, 107, 132, 171, 215, 264,
+    342, 430, 528, 684, 860, 1056, 1368,
+    1717, 2108, 2732, 3428, 4203,
+  };
+
+  // iterate through the table and find whether the user-provided value
+  // is lower than the pre-computed average of the adjacent bandwidth values
+  // if it is, we consider that to be a match even though the actual value is not precise
+  uint16_t rxBwInt = rxBw*10.0f;
+  for(size_t i = 0; i < (lutSize - 1); i++) {
+    if(rxBwInt < rxBwAvg[i]) {
+      *val = lut[i];
+      return(0);
+    }
+  }
+
+  // if nothing matched up to here, match with the last value
+  if(rxBwInt <= rxBwMax*10) {
+    *val = lut[lutSize - 1];
+    return(0);
+  }
+
+  return(-1);
+}
+
+
+#define SX126X_CRYSTAL_FREQ                            32.0f
+
+void setModulationParamsFSK(float br, float freqDev, float rxBw, uint8_t pulseShape) {
+
+    uint32_t brRaw = (uint32_t)((SX126X_CRYSTAL_FREQ * 1000000.0f * 32.0f) / (br * 1000.0f));
+
+    uint8_t rxBandwidth = 0;
+    findRxBw(rxBw, rxBwLut, sizeof(rxBwLut)/sizeof(rxBwLut[0]), 467.0f, &rxBandwidth);
+
+    // set frequency deviation to lowest available setting (required for digimodes)
+    // calculate raw frequency deviation value
+    uint32_t freqDevRaw = (uint32_t)(((freqDev * 1000.0f) * (float)((uint32_t)(1) << 25)) / (SX126X_CRYSTAL_FREQ * 1000000.0f));
+
+	uint8_t data[8] = {(uint8_t)((brRaw >> 16) & 0xFF), (uint8_t)((brRaw >> 8) & 0xFF), (uint8_t)(brRaw & 0xFF),
+                     pulseShape, rxBandwidth,
+                     (uint8_t)((freqDevRaw >> 16) & 0xFF), (uint8_t)((freqDevRaw >> 8) & 0xFF), (uint8_t)(freqDevRaw & 0xFF)};
+	WriteCommand(SX126X_CMD_SET_MODULATION_PARAMS, data, sizeof(data)); // 0x8B
+}
+
+void setPacketParamsFSK(uint16_t preambleLen, uint8_t maxDetLen, uint8_t crcType, uint8_t syncWordLen, uint8_t addrCmp, uint8_t whiten, uint8_t packType, uint8_t payloadLen) {
+    uint8_t preambleDetectorLen = maxDetLen >= 32 ? SX126X_GFSK_PREAMBLE_DETECT_32 :
+                              maxDetLen >= 24 ? SX126X_GFSK_PREAMBLE_DETECT_24 :
+                              maxDetLen >= 16 ? SX126X_GFSK_PREAMBLE_DETECT_16 :
+                              maxDetLen >   0 ? SX126X_GFSK_PREAMBLE_DETECT_8 :
+                              SX126X_GFSK_PREAMBLE_DETECT_OFF;
+
+    uint8_t data[9] = {(uint8_t)((preambleLen >> 8) & 0xFF), (uint8_t)(preambleLen & 0xFF),
+                     preambleDetectorLen, syncWordLen * 8, addrCmp,
+                     packType, payloadLen, crcType, whiten};
+	WriteCommand(SX126X_CMD_SET_PACKET_PARAMS, data, sizeof(data)); // 0x8C
+}
+
+bool radio_rawRead(uint8_t *buf, int max, int16_t *rssi_)
+{
+    uint8_t rxLen = LoRaReceive(buf, max);
+    if ( rxLen > 0 ) { 
+        int8_t rssi, snr;
+        GetPacketStatus(&rssi, &snr);
+        ESP_LOGD(pcTaskGetName(NULL), "rssi=%d[dBm] snr=%d[dB]", rssi, snr);
+        if (rssi_) {
+            *rssi_ = rssi;
+        }
+        return true;
+    }
+    return false;
+}
+
+#define CONFIG_USE_TCXO 1
+
+bool radio_init() {
+	// Initialize LoRa
+	LoRaInit();
+	int8_t txPowerInDbm = 22;
+
+	uint32_t frequencyInHz = 0;
+#if 0
+#if CONFIG_433MHZ
+	frequencyInHz = 433000000;
+	ESP_LOGI(TAG, "Frequency is 433MHz");
+#elif CONFIG_866MHZ
+	frequencyInHz = 866000000;
+	ESP_LOGI(TAG, "Frequency is 866MHz");
+#elif CONFIG_915MHZ
+	frequencyInHz = 915000000;
+	ESP_LOGI(TAG, "Frequency is 915MHz");
+#elif CONFIG_OTHER
+	ESP_LOGI(TAG, "Frequency is %dMHz", CONFIG_OTHER_FREQUENCY);
+	frequencyInHz = CONFIG_OTHER_FREQUENCY * 1000000;
+#endif
+#endif
+	frequencyInHz = 868300000;
+	ESP_LOGI(TAG, "Frequency is %d Hz", frequencyInHz);
+#if CONFIG_USE_TCXO
+	ESP_LOGW(TAG, "Enable TCXO");
+	float tcxoVoltage = 3.3; // use TCXO
+	bool useRegulatorLDO = true; // use DCDC + LDO
+#else
+	ESP_LOGW(TAG, "Disable TCXO");
+	float tcxoVoltage = 0.0; // don't use TCXO
+	bool useRegulatorLDO = false; // use only LDO in all modes
+#endif
+
+	LoRaDebugPrint(false);
+	if (LoRaBegin(frequencyInHz, txPowerInDbm, tcxoVoltage, useRegulatorLDO) != 0) {
+		ESP_LOGE(TAG, "Does not recognize the module");
+		while(1) {
+			vTaskDelay(1);
+		}
+	}
+
+	//LoRaConfig(spreadingFactor, bandwidth, codingRate, preambleLength, payloadLen, crcOn, invertIrq);
+
+	SetStopRxTimerOnPreambleDetect(false);
+
+	SetDioIrqParams(SX126X_IRQ_ALL, //all interrupts enabled
+		SX126X_IRQ_RX_DONE, //interrupts on DIO1
+		SX126X_IRQ_NONE, //interrupts on DIO2
+		SX126X_IRQ_NONE //interrupts on DIO3
+	);
+
+	SetPacketType(SX126X_PACKET_TYPE_GFSK);
+
+    uint8_t syncwords[] = { 0x2D, 0xD4 };
+	WriteRegister(SX126X_REG_SYNC_WORD_0, syncwords, 2);
+
+    setPacketParamsFSK(24, 16, SX126X_GFSK_CRC_OFF, 
+        2, SX126X_GFSK_ADDRESS_FILT_OFF, 
+        SX126X_GFSK_WHITENING_OFF, SX126X_GFSK_PACKET_FIXED, 0x40);
+
+    setModulationParamsFSK(8.22, 10.0, 250.0, SX126X_GFSK_FILTER_NONE);
+
+	// Receive state no receive timeoout
+    SetRx(0xFFFFFF);
+
+    gpio_num_t interruptNum = CONFIG_INT_GPIO; // GPIO number for the interrupt
+    gpio_set_direction(interruptNum, GPIO_MODE_INPUT);
+    gpio_set_intr_type(interruptNum, GPIO_INTR_POSEDGE);
+    gpio_isr_handler_add(interruptNum, (gpio_isr_t)onPacketReceived, 0);
+
+    return true;
+}
+
+#endif

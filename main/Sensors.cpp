@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-// C++ <-> C stub
+// C -> C++ stub
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "Sensors.h"
@@ -26,7 +26,7 @@ bool Sensors_decodeMessage(void *s_, const uint8_t *msg, uint8_t msgSize, int16_
     auto s = reinterpret_cast<Sensors*>(s_);
     if (s->weatherSensor.decodeMessage(msg, msgSize, rssi) == DECODE_OK) {
         static int count = 0;
-        // FIXME kludge. use time
+        // FIXME kludge. use time instead
         if (++count == 3) {
             s->comm.haAutoDiscovery();
         }

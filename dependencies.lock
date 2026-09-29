@@ -49,6 +49,14 @@ dependencies:
       path: components/rf69
       type: git
     version: 5396c316f6204a4f2dc8b826f4e5045e690e0471
+  sx126x:
+    component_hash: 35539cfa1b28600da896eeff7ca5bffd6203d0c5846f998f0390d7124f283a67
+    dependencies: []
+    source:
+      git: https://github.com/nopnop2002/esp-idf-sx126x.git
+      path: components/ra01s
+      type: git
+    version: 91102ceab4747ceb41b3f6b6484870c98a7a2aa3
 direct_dependencies:
 - BresserWeatherSensorReceiver
 - espressif/cjson
@@ -56,6 +64,7 @@ direct_dependencies:
 - espressif/mqtt
 - idf
 - rf69
-manifest_hash: 929a5a95d9886ee6e6744d64c70c22633e1ea449aa8d31612a59f9f129082d89
+- sx126x
+manifest_hash: 5ae9a2becbd1ed802d054bbad156bc4a26995d11caee7dbbf5e8b08b05104109
 target: esp32s3
 version: 3.0.0

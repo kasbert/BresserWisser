@@ -481,7 +481,7 @@ void MQTTComm::publishWeatherdata(bool complete, bool retain)
             }
             if ((weatherSensor.sensor[i].w.temp_ok) && (weatherSensor.sensor[i].w.humidity_ok))
             {
-                JSON_ADD_NUMBER(jsonExtra, "dewpoint_c", calcdewpoint(weatherSensor.sensor[i].w.temp_c, weatherSensor.sensor[i].w.humidity));
+                JSON_ADD_NUMBER(jsonExtra, "dewpoint_c", ROUND_1(calcdewpoint(weatherSensor.sensor[i].w.temp_c, weatherSensor.sensor[i].w.humidity)));
 
                 if (weatherSensor.sensor[i].w.wind_ok)
                 {
@@ -490,7 +490,7 @@ void MQTTComm::publishWeatherdata(bool complete, bool retain)
                 if (weatherSensor.sensor[i].w.tglobe_ok)
                 {
                     float t_wet = calcnaturalwetbulb(weatherSensor.sensor[i].w.temp_c, weatherSensor.sensor[i].w.humidity);
-                    JSON_ADD_NUMBER(jsonExtra, "wgbt", calcwbgt(t_wet, weatherSensor.sensor[i].w.tglobe_c, weatherSensor.sensor[i].w.temp_c));
+                    JSON_ADD_NUMBER(jsonExtra, "wgbt", ROUND_1(calcwbgt(t_wet, weatherSensor.sensor[i].w.tglobe_c, weatherSensor.sensor[i].w.temp_c)));
 
                 }
             }
@@ -508,8 +508,8 @@ void MQTTComm::publishWeatherdata(bool complete, bool retain)
             {
                 if (weatherSensor.sensor[i].w.tglobe_ok || complete)
                 {
-                    JSON_ADD_NUMBER(jsonSensor, "t_globe_c", weatherSensor.sensor[i].w.tglobe_c);
-                    JSON_ADD_NUMBER(jsonCombined, "ws_t_globe_c", weatherSensor.sensor[i].w.tglobe_c);
+                    JSON_ADD_NUMBER(jsonSensor, "t_globe_c", ROUND_1(weatherSensor.sensor[i].w.tglobe_c));
+                    JSON_ADD_NUMBER(jsonCombined, "ws_t_globe_c", ROUND_1(weatherSensor.sensor[i].w.tglobe_c));
                 }
             }
             if (weatherSensor.sensor[i].w.rain_ok || complete)

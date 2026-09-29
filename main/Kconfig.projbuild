@@ -1,11 +1,28 @@
 menu "Application Configuration"
 
-    config DIO0_GPIO
-        int "RF69 DIO0 GPIO"
+	choice RADIO_TYPE
+		prompt "Radio module type"
+		default RADIO_TYPE_SX1262
+		help
+			Select the radio type used by the LoRaHub (sx1261, sx1262, sx1268, llcc68, lr1121).
+
+		config RADIO_TYPE_SX1262
+			bool "sx1262"
+			help
+				Select sx1262 radio.
+
+		config RADIO_TYPE_RFM68
+			bool "rfm68"
+			help
+				Select RFM68 radio.
+	endchoice
+
+    config INT_GPIO
+        int "Interrupt GPIO"
         range -1 GPIO_RANGE_MAX
         default  0
         help
-            Pin Number to be used as the DIO0 signal (==interrupt).
+            Pin Number to be used as the interrupt signal. DIO0 in RF69 and DIO1 SX1262
 
 	menu "WiFi Setting"
 
@@ -100,10 +117,9 @@ menu "Application Configuration"
 
     config WIFI_MANAGER
         bool "WIFI Manager"
-        default  y
+        default  n
         help
                 Create AP for configuration
-
     config USE_MDNS
         bool "MDNS"
         default  y

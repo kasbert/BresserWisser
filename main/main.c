@@ -105,10 +105,10 @@ void app_main()
 
     // My init
 	if (!radio_init()) {
-		ESP_LOGE(TAG, "RFM69 radio init failed");
+		ESP_LOGE(TAG, "Radio init failed");
 		while (1) { vTaskDelay(1); }
 	}
-	ESP_LOGI(TAG, "RFM69 radio init OK!");
+	ESP_LOGI(TAG, "Radio init OK!");
 
 	xTaskCreate(&rx_task, "RX", 1024*10, NULL, 5, NULL);
 }
