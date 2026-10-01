@@ -125,6 +125,11 @@ static int publish(esp_mqtt_client_handle_t client, const char *topic, const cha
     return -1;
 }
 
+void MQTTComm::publishStatus(void) {
+    if (client) {
+        publish(client, (Hostname + "/" + mqttTopics.pubStatus).c_str(), "online", 0, 0, false);
+    }
+}
 
 void MQTTComm::setClient(esp_mqtt_client_handle_t client_) {
     client = client_;
@@ -134,8 +139,6 @@ void MQTTComm::setClient(esp_mqtt_client_handle_t client_) {
         esp_mqtt_client_subscribe(client, (Hostname + "/" + mqttTopics.subGetExc).c_str(), 0);
         esp_mqtt_client_subscribe(client, (Hostname + "/" + mqttTopics.subSetInc).c_str(), 0);
         esp_mqtt_client_subscribe(client, (Hostname + "/" + mqttTopics.subSetExc).c_str(), 0);
-        log_i("%s: %s\n", (Hostname + "/" + mqttTopics.pubStatus).c_str(), "online");
-        publish(client, (Hostname + "/" + mqttTopics.pubStatus).c_str(), "online", 0, 0, false);
     }
 };
 
@@ -491,7 +494,6 @@ void MQTTComm::publishWeatherdata(bool complete, bool retain)
                 {
                     float t_wet = calcnaturalwetbulb(weatherSensor.sensor[i].w.temp_c, weatherSensor.sensor[i].w.humidity);
                     JSON_ADD_NUMBER(jsonExtra, "wgbt", ROUND_1(calcwbgt(t_wet, weatherSensor.sensor[i].w.tglobe_c, weatherSensor.sensor[i].w.temp_c)));
-
                 }
             }
             if (weatherSensor.sensor[i].w.uv_ok || complete)

@@ -257,6 +257,17 @@ void setPacketParamsFSK(uint16_t preambleLen, uint8_t maxDetLen, uint8_t crcType
 	WriteCommand(SX126X_CMD_SET_PACKET_PARAMS, data, sizeof(data)); // 0x8C
 }
 
+// SX126X_REG_RX_GAIN
+#define SX126X_RX_GAIN_BOOSTED                         0x96        //  7     0   Rx gain: boosted
+#define SX126X_RX_GAIN_POWER_SAVING                    0x94        //  7     0            power saving
+#define SX126X_RX_GAIN_SPECTRAL_SCAN                   0xCB        //  7     0            spectral scan
+
+void setRxBoostedGainMode(bool rxbgm) {
+  // update RX gain setting register
+  uint8_t rxGain = rxbgm ? SX126X_RX_GAIN_BOOSTED : SX126X_RX_GAIN_POWER_SAVING;
+  WriteRegister(SX126X_REG_RX_GAIN, &rxGain, 1);
+}
+
 bool radio_rawRead(uint8_t *buf, int max, int16_t *rssi_)
 {
     uint8_t rxLen = LoRaReceive(buf, max);
@@ -335,6 +346,7 @@ bool radio_init() {
         SX126X_GFSK_WHITENING_OFF, SX126X_GFSK_PACKET_FIXED, 0x40);
 
     setModulationParamsFSK(8.22, 10.0, 250.0, SX126X_GFSK_FILTER_NONE);
+    setRxBoostedGainMode(true);
 
 	// Receive state no receive timeoout
     SetRx(0xFFFFFF);

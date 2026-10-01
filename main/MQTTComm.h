@@ -233,9 +233,11 @@ class MQTTComm {
 
     void setClient(esp_mqtt_client_handle_t client_) ;
 
-    void setHostNamer(std::string hostname) {
+    void setHostName(std::string hostname) {
         Hostname = hostname;
     };
+
+    void publishStatus(void);
 
     protected:
 

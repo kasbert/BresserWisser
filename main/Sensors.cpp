@@ -29,6 +29,7 @@ bool Sensors_decodeMessage(void *s_, const uint8_t *msg, uint8_t msgSize, int16_
         // FIXME kludge. use time instead
         if (++count == 3) {
             s->comm.haAutoDiscovery();
+            s->comm.publishStatus();
         }
         if (count > 100) {
             count = 0;
@@ -42,6 +43,7 @@ extern "C"
 void Sensors_mqttConnected(void *s_, esp_mqtt_client_handle_t handle) {
     auto s = reinterpret_cast<Sensors*>(s_);
     s->comm.setClient(handle);
+    s->comm.publishStatus();
 }
 
 extern "C"

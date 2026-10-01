@@ -24,6 +24,13 @@ menu "Application Configuration"
         help
             Pin Number to be used as the interrupt signal. DIO0 in RF69 and DIO1 SX1262
 
+    config LED_GPIO
+        int "LED GPIO"
+        range -1 GPIO_RANGE_MAX
+        default  48
+        help
+            Pin Number for LED
+
 	menu "WiFi Setting"
 
         config ESP_WIFI_SSID

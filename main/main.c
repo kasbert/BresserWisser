@@ -28,7 +28,6 @@ bool radio_init();
 bool radio_rawRead(uint8_t *buf, int max, int16_t *rssi);
 esp_err_t wifi_init_sta(void);
 
-
 #define MSG_BUF_SIZE            27
 #define MSG_MAX_SIZE            66
 
@@ -46,12 +45,15 @@ void rx_task(void *pvParameter)
 	while(1) {
         int16_t rssi = 0;
 		if (radio_rawRead(rxBuf, MSG_MAX_SIZE, &rssi)) {
+            gpio_set_level(CONFIG_LED_GPIO, 1);
+
             ESP_LOGI(TAG, "rssi=%d", rssi);
             ESP_LOG_BUFFER_HEXDUMP(TAG, rxBuf, MSG_MAX_SIZE, ESP_LOG_INFO);
             bool status = Sensors_decodeMessage(sensors, rxBuf, MSG_MAX_SIZE, rssi);
             if (status) {
                 Sensors_publishWeatherdata(sensors);
             }
+            gpio_set_level(CONFIG_LED_GPIO, 0);
 		} else {
             int received_pin;
             if (xQueueReceive(radioReceiveQueue, &received_pin, 10/*portMAX_DELAY*/) == pdTRUE) {
@@ -109,6 +111,8 @@ void app_main()
 		while (1) { vTaskDelay(1); }
 	}
 	ESP_LOGI(TAG, "Radio init OK!");
+
+    gpio_set_direction(CONFIG_LED_GPIO, GPIO_MODE_OUTPUT);
 
 	xTaskCreate(&rx_task, "RX", 1024*10, NULL, 5, NULL);
 }
